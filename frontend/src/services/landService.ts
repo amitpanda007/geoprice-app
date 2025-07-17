@@ -69,4 +69,30 @@ export class LandService {
       throw error;
     }
   }
+
+  static async addAreaByLocation(
+    name: string,
+    address: string,
+    type: LandArea["type"],
+    estimatedPrice: number
+  ): Promise<LandArea> {
+    try {
+      const response = await api.post<ApiResponse<LandArea>>(
+        "/land-areas/add-location",
+        {
+          name,
+          address,
+          type,
+          estimatedPrice,
+        }
+      );
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      throw new Error(response.data.error || "Failed to add area by location");
+    } catch (error) {
+      console.error("Error adding area by location:", error);
+      throw error;
+    }
+  }
 }

@@ -5,7 +5,7 @@ import { MapProps, LandArea } from "../types";
 const getColorByType = (type: LandArea["type"]): string => {
   switch (type) {
     case "residential":
-      return "#22c55e"; // green
+      return "#10b981"; // emerald
     case "commercial":
       return "#3b82f6"; // blue
     case "industrial":
@@ -17,11 +17,22 @@ const getColorByType = (type: LandArea["type"]): string => {
   }
 };
 
-const getColorByPrice = (pricePerSqFt: number): string => {
-  if (pricePerSqFt < 100) return "#22c55e";
-  if (pricePerSqFt < 200) return "#f59e0b";
-  if (pricePerSqFt < 300) return "#ef4444";
-  return "#dc2626";
+const getFillColorByPrice = (pricePerSqFt: number): string => {
+  // More sophisticated color gradient for price ranges
+  if (pricePerSqFt < 300) return "#dcfdf7"; // very light green
+  if (pricePerSqFt < 600) return "#fef3c7"; // light yellow
+  if (pricePerSqFt < 900) return "#fed7d7"; // light red
+  if (pricePerSqFt < 1200) return "#e0e7ff"; // light purple
+  return "#fce7f3"; // light pink for highest prices
+};
+
+const getStrokeColorByPrice = (pricePerSqFt: number): string => {
+  // Corresponding stroke colors for price ranges
+  if (pricePerSqFt < 300) return "#059669"; // green
+  if (pricePerSqFt < 600) return "#d97706"; // amber
+  if (pricePerSqFt < 900) return "#dc2626"; // red
+  if (pricePerSqFt < 1200) return "#7c3aed"; // purple
+  return "#be185d"; // pink for highest prices
 };
 
 // Custom Polygon component for Google Maps
@@ -39,15 +50,16 @@ const MapPolygon: React.FC<{
     // Convert coordinates to Google Maps format
     const paths = area.coordinates.map(([lat, lng]) => ({ lat, lng }));
 
-    // Create polygon
+    // Create polygon with enhanced styling for geographic boundaries
     const polygonInstance = new google.maps.Polygon({
       paths: paths,
-      strokeColor: getColorByType(area.type),
-      strokeOpacity: 1.0,
-      strokeWeight: isSelected ? 4 : 2,
-      fillColor: getColorByPrice(area.pricePerSqFt),
-      fillOpacity: isSelected ? 0.8 : 0.6,
+      strokeColor: getStrokeColorByPrice(area.pricePerSqFt),
+      strokeOpacity: 0.9,
+      strokeWeight: isSelected ? 4 : 2.5,
+      fillColor: getFillColorByPrice(area.pricePerSqFt),
+      fillOpacity: isSelected ? 0.6 : 0.4,
       clickable: true,
+      zIndex: isSelected ? 2 : 1,
     });
 
     // Create info window
@@ -119,8 +131,9 @@ const MapPolygon: React.FC<{
   useEffect(() => {
     if (polygon) {
       polygon.setOptions({
-        strokeWeight: isSelected ? 4 : 2,
-        fillOpacity: isSelected ? 0.8 : 0.6,
+        strokeWeight: isSelected ? 4 : 2.5,
+        fillOpacity: isSelected ? 0.6 : 0.4,
+        zIndex: isSelected ? 2 : 1,
       });
     }
   }, [polygon, isSelected]);
@@ -156,10 +169,13 @@ const MapComponent: React.FC<MapProps> = ({
     <div className="h-full w-full">
       <APIProvider apiKey={process.env.REACT_APP_GOOGLE_MAPS_API_KEY || ""}>
         <Map
-          defaultCenter={{ lat: 40.7589, lng: -73.9851 }} // New York coordinates
-          defaultZoom={13}
+          defaultCenter={{ lat: 40.7505, lng: -73.9934 }} // Centered on Manhattan
+          defaultZoom={12}
           style={{ width: "100%", height: "100%" }}
           mapId="geoprice-map"
+          mapTypeControl={false}
+          streetViewControl={false}
+          fullscreenControl={false}
         >
           <MapController />
           {landAreas.map((area) => (

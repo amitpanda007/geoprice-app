@@ -1,14 +1,18 @@
 import { Router, Request, Response } from "express";
 import { LandDataService } from "../data";
 import { ApiResponse, LandArea } from "../types";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const router = Router();
-const landDataService = new LandDataService();
+// Initialize with Google Maps API key if available
+const landDataService = new LandDataService(process.env.GOOGLE_MAPS_API_KEY);
 
 // GET /api/land-areas - Get all land areas
-router.get("/", (req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
-    const landAreas = landDataService.getAllLandAreas();
+    const landAreas = await landDataService.getAllLandAreas();
     const response: ApiResponse<LandArea[]> = {
       success: true,
       data: landAreas,
@@ -16,6 +20,7 @@ router.get("/", (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
+    console.error("Error retrieving land areas:", error);
     const response: ApiResponse<null> = {
       success: false,
       error: "Failed to retrieve land areas",
@@ -25,10 +30,10 @@ router.get("/", (req: Request, res: Response) => {
 });
 
 // GET /api/land-areas/:id - Get land area by ID
-router.get("/:id", (req: Request, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const landArea = landDataService.getLandAreaById(id);
+    const landArea = await landDataService.getLandAreaById(id);
 
     if (!landArea) {
       const response: ApiResponse<null> = {
@@ -45,6 +50,7 @@ router.get("/:id", (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
+    console.error("Error retrieving land area:", error);
     const response: ApiResponse<null> = {
       success: false,
       error: "Failed to retrieve land area",
@@ -54,7 +60,7 @@ router.get("/:id", (req: Request, res: Response) => {
 });
 
 // GET /api/land-areas/type/:type - Get land areas by type
-router.get("/type/:type", (req: Request, res: Response) => {
+router.get("/type/:type", async (req: Request, res: Response) => {
   try {
     const { type } = req.params;
     const validTypes = [
@@ -72,7 +78,7 @@ router.get("/type/:type", (req: Request, res: Response) => {
       return res.status(400).json(response);
     }
 
-    const landAreas = landDataService.getLandAreasByType(
+    const landAreas = await landDataService.getLandAreasByType(
       type as LandArea["type"]
     );
     const response: ApiResponse<LandArea[]> = {
@@ -82,6 +88,7 @@ router.get("/type/:type", (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
+    console.error("Error retrieving land areas by type:", error);
     const response: ApiResponse<null> = {
       success: false,
       error: "Failed to retrieve land areas by type",
@@ -91,7 +98,7 @@ router.get("/type/:type", (req: Request, res: Response) => {
 });
 
 // GET /api/land-areas/search - Search land areas
-router.get("/search/:query", (req: Request, res: Response) => {
+router.get("/search/:query", async (req: Request, res: Response) => {
   try {
     const { query } = req.params;
 
@@ -103,7 +110,7 @@ router.get("/search/:query", (req: Request, res: Response) => {
       return res.status(400).json(response);
     }
 
-    const landAreas = landDataService.searchLandAreas(query);
+    const landAreas = await landDataService.searchLandAreas(query);
     const response: ApiResponse<LandArea[]> = {
       success: true,
       data: landAreas,
@@ -111,9 +118,54 @@ router.get("/search/:query", (req: Request, res: Response) => {
     };
     res.json(response);
   } catch (error) {
+    console.error("Error searching land areas:", error);
     const response: ApiResponse<null> = {
       success: false,
       error: "Failed to search land areas",
+    };
+    res.status(500).json(response);
+  }
+});
+
+// POST /api/land-areas/add-location - Add a new area by location
+router.post("/add-location", async (req: Request, res: Response) => {
+  try {
+    const { name, address, type, estimatedPrice } = req.body;
+
+    if (!name || !address || !type || !estimatedPrice) {
+      const response: ApiResponse<null> = {
+        success: false,
+        error: "Name, address, type, and estimatedPrice are required",
+      };
+      return res.status(400).json(response);
+    }
+
+    const newArea = await landDataService.addAreaByLocation(
+      name,
+      address,
+      type,
+      estimatedPrice
+    );
+
+    if (!newArea) {
+      const response: ApiResponse<null> = {
+        success: false,
+        error: "Failed to generate area from location",
+      };
+      return res.status(400).json(response);
+    }
+
+    const response: ApiResponse<LandArea> = {
+      success: true,
+      data: newArea,
+      message: "New area added successfully",
+    };
+    res.json(response);
+  } catch (error) {
+    console.error("Error adding area by location:", error);
+    const response: ApiResponse<null> = {
+      success: false,
+      error: "Failed to add area by location",
     };
     res.status(500).json(response);
   }
